@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "r2-benchmark",
+  "compatibility_date": "2025-04-04",
+  "main": "./workers/app.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "route": {
+    "custom_domain": true,
+    "pattern": "my.address.com" // your custom domain
+  },
+  "r2_buckets": [
+    {
+      "binding": "eeur",
+      "bucket_name": "eeur bucket name" // eeur bucket name
+    },
+    {
+      "binding": "weur",
+      "bucket_name": "weur bucket name" // weur bucket name
+    },
+    {
+      "binding": "wnam",
+      "bucket_name": "wnam bucket name" // wnam bucket name
+    },
+    {
+      "binding": "apac",
+      "bucket_name": "apac bucket name" // apac bucket name
+    }
+  ],
+  "vars": {
+    "CF_ACCOUNT_ID": "account id", // your account id
+    "PRESIGNED_EEUR_BUCKET_NAME": "eeur bucket name", // bucket name
+    "PRESIGNED_WEUR_BUCKET_NAME": "weur bucket name", // bucket name
+    "PRESIGNED_WNAM_BUCKET_NAME": "wnam bucket name", //bucket name
+    "PRESIGNED_APAC_BUCKET_NAME": "apac bucket name" //bucket name
+  },
+  "observability": {
+    "enabled": true
+  },
+  "placement": { "mode": "smart" }
+}
