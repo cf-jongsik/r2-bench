@@ -32,6 +32,8 @@
     "PRESIGNED_WEUR_BUCKET_NAME": "weur bucket name", // bucket name
     "PRESIGNED_WNAM_BUCKET_NAME": "wnam bucket name", //bucket name
     "PRESIGNED_APAC_BUCKET_NAME": "apac bucket name" //bucket name
+    // "R2_ACCESS_KEY_ID" : "access key id", // your access key id  <-- THIS SHOULD BE IN SECRET
+    // "R2_SECRET_ACCESS_KEY" : "secret access key", // your secret access key <-- THIS SHOULD BE IN SECRET
   },
   "observability": {
     "enabled": true
