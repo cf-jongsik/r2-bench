@@ -55,7 +55,6 @@ Test uploads across four regional buckets:
 4. **Configure R2 buckets**
 
    The `wrangler.jsonc` file is already configured with four regional buckets. You may need to:
-
    - Create the R2 buckets in your Cloudflare dashboard
    - Update the bucket names in `wrangler.jsonc` if needed
    - Update your Cloudflare Account ID in the `vars` section
@@ -148,7 +147,7 @@ Private project
 
 ## Notes
 
-This is a demonstration/benchmarking tool. Results shown are for testing purposes only and may vary based on:
+This is a benchmarking tool for comparing upload performance to Cloudflare R2 across different methods and regions. Results may vary based on:
 
 - Network conditions
 - File size

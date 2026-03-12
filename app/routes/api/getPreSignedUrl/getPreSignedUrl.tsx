@@ -1,18 +1,27 @@
 import type { Route } from "./+types/getPreSignedUrl";
 import { AwsClient } from "aws4fetch";
-import { isValidBucket } from "../../../utils";
+import { validatePresignedRequest, CONSTANTS } from "$lib/validation";
+import { logError } from "$lib/errors";
+
+const BUCKET_NAME_MAP: Record<BucketRegion, string> = {
+  eeur: "PRESIGNED_EEUR_BUCKET_NAME",
+  weur: "PRESIGNED_WEUR_BUCKET_NAME",
+  wnam: "PRESIGNED_WNAM_BUCKET_NAME",
+  apac: "PRESIGNED_APAC_BUCKET_NAME",
+};
 
 export async function action({
   request,
   context,
 }: Route.ActionArgs): Promise<PRESIGNED_API_RESULT> {
   if (request.method !== "POST") {
-    console.error("Method not allowed: expected POST");
     return {
       success: false,
       error: "Method not allowed",
     };
   }
+
+  const env = context.cloudflare.env as unknown as Record<string, string>;
   const {
     R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY,
@@ -21,7 +30,8 @@ export async function action({
     PRESIGNED_EEUR_BUCKET_NAME,
     PRESIGNED_WEUR_BUCKET_NAME,
     PRESIGNED_WNAM_BUCKET_NAME,
-  } = context.cloudflare.env;
+  } = env;
+
   if (
     !R2_ACCESS_KEY_ID ||
     !R2_SECRET_ACCESS_KEY ||
@@ -31,85 +41,89 @@ export async function action({
     !PRESIGNED_WEUR_BUCKET_NAME ||
     !PRESIGNED_WNAM_BUCKET_NAME
   ) {
-    console.error("no platform variable(s)");
+    logError("getPreSignedUrl", "Missing required environment variables");
     return {
       success: false,
-      error: "no platform variable(s)",
+      error: "Server configuration error",
     };
   }
-  let payload: PRESIGNED_API_REQUEST;
+
+  let payload: unknown;
   try {
-    payload = await request.json<PRESIGNED_API_REQUEST>();
+    payload = await request.json();
   } catch (error) {
-    console.error("Failed to parse request body:", error);
+    logError("getPreSignedUrl", "Failed to parse request body");
     return {
       success: false,
       error: "Invalid JSON payload",
     };
   }
 
-  const { fileName, bucket, contentType, contentLength } = payload;
-
-  if (!fileName || !bucket || !contentType || !contentLength) {
-    console.error("Missing required fields in payload");
+  const validation = validatePresignedRequest(payload);
+  if (!validation.valid) {
     return {
       success: false,
-      error:
-        "Missing required fields: fileName, bucket, contentType, contentLength",
+      error: validation.error,
     };
   }
 
-  if (!isValidBucket(bucket)) {
-    console.error("Invalid bucket:", bucket);
+  const { fileName, bucket, contentType, contentLength } = validation.data;
+
+  const envVarName = BUCKET_NAME_MAP[bucket];
+  const bucketName =
+    context.cloudflare.env[envVarName as keyof typeof context.cloudflare.env];
+
+  if (!bucketName) {
+    logError(
+      "getPreSignedUrl",
+      `Bucket environment variable not found: ${envVarName}`,
+    );
     return {
       success: false,
-      error: `Invalid bucket. Must be one of: eeur, weur, wnam, apac`,
+      error: "Server configuration error",
     };
   }
 
-  // Map bucket region to environment variable
-  const bucketNameMap: Record<BucketRegion, string> = {
-    eeur: PRESIGNED_EEUR_BUCKET_NAME,
-    weur: PRESIGNED_WEUR_BUCKET_NAME,
-    wnam: PRESIGNED_WNAM_BUCKET_NAME,
-    apac: PRESIGNED_APAC_BUCKET_NAME,
-  };
-  const bucketName = bucketNameMap[bucket];
+  const targetUrl = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${bucketName}/${fileName}`;
 
-  const URL = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${bucketName}/${fileName}`;
+  try {
+    const client = new AwsClient({
+      accessKeyId: R2_ACCESS_KEY_ID,
+      secretAccessKey: R2_SECRET_ACCESS_KEY,
+      region: "auto",
+    });
 
-  console.debug("Presigned target URL", URL);
-  const client = new AwsClient({
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-    region: "auto",
-  });
-
-  const url = `${URL}?X-Amz-Expires=${3600}`;
-  const signedUrl = await client.sign(
-    new Request(url, {
-      method: "PUT",
-      headers: {
-        "content-type": contentType,
-        "content-length": contentLength.toString(),
+    const presignedUrl = `${targetUrl}?X-Amz-Expires=${CONSTANTS.PRESIGNED_URL_EXPIRY}`;
+    const signedUrl = await client.sign(
+      new Request(presignedUrl, {
+        method: "PUT",
+        headers: {
+          "content-type": contentType,
+          "content-length": contentLength.toString(),
+        },
+      }),
+      {
+        aws: { signQuery: true },
       },
-    }),
-    {
-      aws: { signQuery: true },
-    }
-  );
+    );
 
-  if (!signedUrl) {
-    console.error("Failed to generate presigned URL");
+    if (!signedUrl) {
+      logError("getPreSignedUrl", "Failed to generate presigned URL");
+      return {
+        success: false,
+        error: "Failed to generate presigned URL",
+      };
+    }
+
+    return {
+      success: true,
+      presignedUrl: signedUrl.url,
+    };
+  } catch (error) {
+    logError("getPreSignedUrl", error);
     return {
       success: false,
       error: "Failed to generate presigned URL",
     };
   }
-  console.debug("signedUrl", signedUrl.url);
-
-  return {
-    success: true,
-    presignedUrl: signedUrl.url,
-  };
 }

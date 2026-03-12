@@ -1,5 +1,10 @@
 import type { Route } from "./+types/uploadUsingBinding";
-import { isValidBucket } from "../../../utils";
+import {
+  validateBucketParameter,
+  validateFileName,
+  validateContentType,
+} from "$lib/validation";
+import { logError } from "$lib/errors";
 
 export async function action({
   request,
@@ -7,77 +12,68 @@ export async function action({
   params,
 }: Route.ActionArgs): Promise<BINDING_API_RESULT> {
   if (request.method !== "PUT") {
-    console.error("Method not allowed: expected PUT");
     return {
       success: false,
       error: "Method not allowed",
     };
   }
-  const {
-    PRESIGNED_APAC_BUCKET_NAME,
-    PRESIGNED_EEUR_BUCKET_NAME,
-    PRESIGNED_WEUR_BUCKET_NAME,
-    PRESIGNED_WNAM_BUCKET_NAME,
-  } = context.cloudflare.env;
-  if (
-    !PRESIGNED_APAC_BUCKET_NAME ||
-    !PRESIGNED_EEUR_BUCKET_NAME ||
-    !PRESIGNED_WEUR_BUCKET_NAME ||
-    !PRESIGNED_WNAM_BUCKET_NAME
-  ) {
-    console.error("no platform variable(s)");
-    return {
-      success: false,
-      error: "no platform variable(s)",
-    };
-  }
 
   const { bucket, fileName } = params;
 
-  if (!bucket || !isValidBucket(bucket)) {
-    console.error("Invalid bucket parameter:", bucket);
+  const bucketValidation = validateBucketParameter(bucket);
+  if (!bucketValidation.valid) {
     return {
       success: false,
-      error: "Invalid bucket. Must be one of: eeur, weur, wnam, apac",
+      error: bucketValidation.error,
     };
   }
 
-  console.debug("Binding target bucketName", bucket);
-  const r2 = context.cloudflare.env[bucket];
-
-  if (!r2) {
-    console.error("no platform variable(s)");
+  const fileNameValidation = validateFileName(fileName);
+  if (!fileNameValidation.valid) {
     return {
       success: false,
-      error: "no platform variable(s)",
+      error: fileNameValidation.error,
     };
   }
 
-  const contentType = request.headers.get("Content-Type");
-  if (!fileName || !contentType) {
-    console.error("Missing fileName or Content-Type");
+  const contentTypeHeader = request.headers.get("Content-Type");
+  const contentTypeValidation = validateContentType(contentTypeHeader);
+  if (!contentTypeValidation.valid) {
     return {
       success: false,
-      error: "Missing fileName or Content-Type header",
+      error: contentTypeValidation.error,
     };
   }
 
   if (!request.body) {
-    console.error("Request body is empty");
     return {
       success: false,
       error: "Request body is required",
     };
   }
 
-  console.debug("Uploading file:", fileName);
   try {
+    const r2 = context.cloudflare.env[bucket as BucketRegion];
+
+    if (!r2) {
+      logError(
+        "uploadUsingBinding",
+        `R2 binding not found for bucket: ${bucket}`,
+      );
+      return {
+        success: false,
+        error: "Server configuration error",
+      };
+    }
+
     const result = await r2.put(fileName, request.body, {
-      httpMetadata: { contentType },
+      httpMetadata: {
+        contentType: contentTypeHeader || "application/octet-stream",
+      },
     });
 
     if (!result) {
-      console.error("Upload failed: no result returned");
+      logError("uploadUsingBinding", "Upload returned no result");
       return { success: false, error: "Upload failed" };
     }
 
@@ -86,10 +82,10 @@ export async function action({
       etag: result.etag,
     };
   } catch (error) {
-    console.error("Upload error:", error);
+    logError("uploadUsingBinding", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Upload failed",
+      error: "Upload failed",
     };
   }
 }

@@ -1,15 +1,13 @@
 import { useCallback, useRef, useState } from "react";
-import { Presigned } from "./presigned/presigned";
-import { Binding } from "./binding/binding";
-import { Multipart } from "./multipart/multipart";
+import { PresignedComponent as Presigned } from "./presigned/presigned";
+import { BindingComponent as Binding } from "./binding/binding";
+import { MultipartComponent as Multipart } from "./multipart/multipart";
+import { formatFileSize } from "$lib/upload-utils";
 
-// Helper function to format file size
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+interface UploaderState {
+  file: File | null;
+  dragActive: boolean;
+  bucket: string;
 }
 
 export function Uploader() {
@@ -18,9 +16,10 @@ export function Uploader() {
   const [bucket, setBucket] = useState<string>("");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSelectedFile = useCallback((f?: File | null): void => {
-    if (!f) return;
-    setFile(f);
+  const handleSelectedFile = useCallback((f: File | null): void => {
+    if (f) {
+      setFile(f);
+    }
   }, []);
 
   const onSelectClick = useCallback(() => {
@@ -29,20 +28,20 @@ export function Uploader() {
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0] ?? null;
-      handleSelectedFile(f);
+      const selectedFile = e.target.files?.[0] ?? null;
+      handleSelectedFile(selectedFile);
     },
-    [handleSelectedFile]
+    [handleSelectedFile],
   );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragActive(false);
-      const f = e.dataTransfer.files?.[0] ?? null;
-      handleSelectedFile(f);
+      const droppedFile = e.dataTransfer.files?.[0] ?? null;
+      handleSelectedFile(droppedFile);
     },
-    [handleSelectedFile]
+    [handleSelectedFile],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -55,6 +54,9 @@ export function Uploader() {
     setDragActive(false);
   }, []);
 
+  const hasFile = file !== null;
+  const hasBucket = bucket !== "";
+
   return (
     <div className="max-w-xl mx-auto p-6 bg-white/80 dark:bg-gray-900/60 rounded-lg shadow-md">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -63,6 +65,7 @@ export function Uploader() {
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
         Select or drag & drop a file to prepare it for upload.
       </p>
+
       <div className="mt-4">
         <select
           className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -76,6 +79,7 @@ export function Uploader() {
           <option value="apac">APAC Bucket</option>
         </select>
       </div>
+
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -115,7 +119,7 @@ export function Uploader() {
             />
           </svg>
           <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            {file ? (
+            {hasFile ? (
               <div>
                 <div className="font-medium text-gray-900 dark:text-gray-100">
                   {file.name}

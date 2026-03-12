@@ -74,11 +74,6 @@ type MULTIPART_API_GENERATE_RESULT =
     };
 
 type MULTIPART_API_REQUEST = {
-  parts: MULTIPART_COMPLETED_PART[];
+  parts: R2UploadedPart[];
   uploadId: string;
-};
-
-type MULTIPART_COMPLETED_PART = {
-  partNumber: number;
-  etag: string;
 };
