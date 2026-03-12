@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "r2-benchmark",
-  "compatibility_date": "2025-04-04",
+  "compatibility_date": "2026-03-04",
   "main": "./workers/app.ts",
   "compatibility_flags": ["nodejs_compat"],
   "route": {
@@ -31,9 +31,15 @@
     "PRESIGNED_EEUR_BUCKET_NAME": "eeur bucket name", // bucket name
     "PRESIGNED_WEUR_BUCKET_NAME": "weur bucket name", // bucket name
     "PRESIGNED_WNAM_BUCKET_NAME": "wnam bucket name", //bucket name
-    "PRESIGNED_APAC_BUCKET_NAME": "apac bucket name" //bucket name
+    "PRESIGNED_APAC_BUCKET_NAME": "apac bucket name", //bucket name
+    "MAX_FILE_SIZE_BINDING": 5241831424, //4999 * 1024 * 1024
+    "MAX_FILE_SIZE_MULTIPART": 5241831424, //4999 * 1024 * 1024
+    "PRESIGNED_URL_EXPIRY": 3600,
+    "MULTIPART_CHUNK_SIZE": 10485760, // 10 * 1024 * 1024
+    "MULTIPART_BATCH_SIZE": 30
     // "R2_ACCESS_KEY_ID" : "access key id", // your access key id  <-- THIS SHOULD BE IN SECRET
     // "R2_SECRET_ACCESS_KEY" : "secret access key", // your secret access key <-- THIS SHOULD BE IN SECRET
+  },
   },
   "observability": {
     "enabled": true

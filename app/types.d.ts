@@ -77,3 +77,50 @@ type MULTIPART_API_REQUEST = {
   parts: R2UploadedPart[];
   uploadId: string;
 };
+
+type CONFIG_API_RESULT =
+  | {
+      success: true;
+      config: {
+        multipartChunkSize: number;
+        maxFileSizeMultipart: number;
+        maxFileSizeBinding: number;
+        multipartBatchSize: number;
+      };
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+interface Config {
+  multipartChunkSize: number;
+  maxFileSizeMultipart: number;
+  maxFileSizeBinding: number;
+  multipartBatchSize: number;
+}
+
+type ConfigResponse =
+  | {
+      success: true;
+      config: Config;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+interface BindingProps {
+  file: File | null;
+  bucket: string;
+}
+
+interface MultipartProps {
+  file: File | null;
+  bucket: string;
+}
+
+interface PresignedProps {
+  file: File | null;
+  bucket: string;
+}

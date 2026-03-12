@@ -1,6 +1,9 @@
 import type { Route } from "./+types/getPreSignedUrl";
 import { AwsClient } from "aws4fetch";
-import { validatePresignedRequest, CONSTANTS } from "$lib/validation";
+import {
+  validatePresignedRequest,
+  PRESIGNED_URL_EXPIRY,
+} from "$lib/validation";
 import { logError } from "$lib/errors";
 
 const BUCKET_NAME_MAP: Record<BucketRegion, string> = {
@@ -93,7 +96,7 @@ export async function action({
       region: "auto",
     });
 
-    const presignedUrl = `${targetUrl}?X-Amz-Expires=${CONSTANTS.PRESIGNED_URL_EXPIRY}`;
+    const presignedUrl = `${targetUrl}?X-Amz-Expires=${PRESIGNED_URL_EXPIRY}`;
     const signedUrl = await client.sign(
       new Request(presignedUrl, {
         method: "PUT",

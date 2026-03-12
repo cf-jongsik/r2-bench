@@ -50,14 +50,22 @@ Test uploads across four regional buckets:
 
 3. **Configure environment**
 
-   Create a `.env` file (if not already present) with your Cloudflare credentials.
+   Copy the example configuration and update with your settings:
+
+   ```bash
+   cp wrangler.jsonc.example wrangler.jsonc
+   ```
+
+   Then edit `wrangler.jsonc` with your Cloudflare credentials, R2 bucket names, and custom domain.
 
 4. **Configure R2 buckets**
 
-   The `wrangler.jsonc` file is already configured with four regional buckets. You may need to:
-   - Create the R2 buckets in your Cloudflare dashboard
-   - Update the bucket names in `wrangler.jsonc` if needed
+   The `wrangler.jsonc` file is configured with four regional buckets. You need to:
+   - Create the R2 buckets in your Cloudflare dashboard (eeur, weur, wnam, apac)
+   - Update the bucket names in `wrangler.jsonc`
    - Update your Cloudflare Account ID in the `vars` section
+   - Set your custom domain in the `route.pattern` field
+   - Set R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY as secrets via Wrangler CLI
 
 ## Development
 
@@ -96,8 +104,16 @@ This will:
 ```
 r2-bench/
 ├── app/
+│   ├── lib/              # Utility libraries
+│   │   ├── errors.ts     # Error handling utilities
+│   │   ├── upload-utils.ts # Upload helper functions
+│   │   └── validation.ts # Input validation
 │   ├── routes/           # Route handlers
 │   │   ├── api/          # API endpoints for upload methods
+│   │   │   ├── config/         # Configuration endpoint
+│   │   │   ├── getPreSignedUrl/# Presigned URL generation
+│   │   │   ├── uploadUsingBinding/ # Direct binding upload
+│   │   │   └── uploadUsingMultiPart/ # Multipart upload
 │   │   └── home.tsx      # Main page
 │   ├── uploader/         # Upload components
 │   │   ├── binding/      # Direct binding upload
@@ -105,10 +121,15 @@ r2-bench/
 │   │   ├── presigned/    # Presigned URL upload
 │   │   └── uploader.tsx  # Main uploader component
 │   ├── entry.server.tsx  # Server entry point
-│   └── root.tsx          # Root component
+│   ├── root.tsx          # Root component
+│   ├── routes.ts         # Route definitions
+│   ├── types.d.ts        # TypeScript type definitions
+│   └── utils.ts          # General utilities
 ├── workers/              # Cloudflare Workers code
-├── wrangler.jsonc        # Cloudflare Workers configuration
-└── react-router.config.ts # React Router configuration
+│   └── app.ts            # Worker entry point
+├── wrangler.jsonc.example # Example Wrangler configuration
+├── react-router.config.ts # React Router configuration
+└── vite.config.ts        # Vite build configuration
 ```
 
 ## Scripts

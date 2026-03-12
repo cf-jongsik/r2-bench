@@ -4,12 +4,6 @@ import { BindingComponent as Binding } from "./binding/binding";
 import { MultipartComponent as Multipart } from "./multipart/multipart";
 import { formatFileSize } from "$lib/upload-utils";
 
-interface UploaderState {
-  file: File | null;
-  dragActive: boolean;
-  bucket: string;
-}
-
 export function Uploader() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);

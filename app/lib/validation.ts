@@ -1,9 +1,11 @@
-const VALID_BUCKETS = ["eeur", "weur", "wnam", "apac"] as const;
-const MAX_FILE_SIZE_BINDING = 4999 * 1024 * 1024;
-const MAX_FILE_SIZE_MULTIPART = 4999 * 1024 * 1024;
-const PRESIGNED_URL_EXPIRY = 3600;
-const MULTIPART_CHUNK_SIZE = 50 * 1024 * 1024;
-const MULTIPART_BATCH_SIZE = 30;
+import { env } from "cloudflare:workers";
+
+export const VALID_BUCKETS = ["eeur", "weur", "wnam", "apac"] as const;
+export const MAX_FILE_SIZE_BINDING = env.MAX_FILE_SIZE_BINDING;
+export const MAX_FILE_SIZE_MULTIPART = env.MAX_FILE_SIZE_MULTIPART;
+export const PRESIGNED_URL_EXPIRY = env.PRESIGNED_URL_EXPIRY;
+export const MULTIPART_CHUNK_SIZE = env.MULTIPART_CHUNK_SIZE;
+export const MULTIPART_BATCH_SIZE = env.MULTIPART_BATCH_SIZE;
 
 export function isValidBucket(bucket: unknown): bucket is BucketRegion {
   return (
@@ -102,12 +104,3 @@ export function validatePresignedRequest(
     },
   };
 }
-
-export const CONSTANTS = {
-  VALID_BUCKETS,
-  MAX_FILE_SIZE_BINDING,
-  MAX_FILE_SIZE_MULTIPART,
-  PRESIGNED_URL_EXPIRY,
-  MULTIPART_CHUNK_SIZE,
-  MULTIPART_BATCH_SIZE,
-};

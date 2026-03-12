@@ -8,11 +8,6 @@ import {
   isAbortError,
 } from "$lib/upload-utils";
 
-interface PresignedProps {
-  file: File | null;
-  bucket: string;
-}
-
 export function PresignedComponent({ file, bucket }: PresignedProps) {
   const [progress, setProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);

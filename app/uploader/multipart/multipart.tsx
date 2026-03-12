@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import axios from "axios";
 import { isValidBucket } from "~/utils";
 import {
@@ -7,26 +7,38 @@ import {
   formatDuration,
   isAbortError,
 } from "$lib/upload-utils";
-import { CONSTANTS } from "$lib/validation";
-
-interface MultipartProps {
-  file: File | null;
-  bucket: string;
-}
 
 export function MultipartComponent({ file, bucket }: MultipartProps) {
   const [progress, setProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [etag, setEtag] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState<UploadProgress | null>(null);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const chunkProgressRef = useRef<number[]>([]);
-  const chunkSize = CONSTANTS.MULTIPART_CHUNK_SIZE;
+  const chunkSize = config?.multipartChunkSize ?? 8 * 1024 * 1024;
   const [totalChunks, setTotalChunks] = useState<number | null>(null);
   const [totalBytes, setTotalBytes] = useState<number | null>(null);
 
+  useEffect(() => {
+    fetch("/api/config", { method: "POST" })
+      .then((res) => res.json())
+      .then((data) => {
+        const response = data as ConfigResponse;
+        if (response.success) {
+          setConfig(response.config);
+        } else {
+          setConfigError(response.error);
+        }
+      })
+      .catch(() => {
+        setConfigError("Failed to load configuration");
+      });
+  }, []);
+
   const startUpload = useCallback(async () => {
-    if (!file || !bucket || !isValidBucket(bucket)) return;
+    if (!file || !bucket || !isValidBucket(bucket) || !config) return;
 
     setIsUploading(true);
     setProgress(0);
@@ -34,11 +46,11 @@ export function MultipartComponent({ file, bucket }: MultipartProps) {
     setTotalChunks(0);
     const startTime = performance.now();
 
-    if (file.size > CONSTANTS.MAX_FILE_SIZE_MULTIPART) {
+    if (file.size > config.maxFileSizeMultipart) {
       setUploadResult({
         finished: false,
         timeTook: performance.now() - startTime,
-        error: `File size exceeds ${(CONSTANTS.MAX_FILE_SIZE_MULTIPART / 1024 / 1024).toFixed(0)}MB limit`,
+        error: `File size exceeds ${(config.maxFileSizeMultipart / 1024 / 1024).toFixed(0)}MB limit`,
       });
       return;
     }
@@ -80,9 +92,9 @@ export function MultipartComponent({ file, bucket }: MultipartProps) {
     try {
       const batchResult: MULTIPART_API_UPLOAD_RESULT[] = [];
 
-      for (let i = 0; i < chunks; i += CONSTANTS.MULTIPART_BATCH_SIZE) {
+      for (let i = 0; i < chunks; i += config.multipartBatchSize) {
         const batchPromises: Promise<MULTIPART_API_UPLOAD_RESULT>[] = [];
-        const end = Math.min(i + CONSTANTS.MULTIPART_BATCH_SIZE, chunks);
+        const end = Math.min(i + config.multipartBatchSize, chunks);
 
         for (let j = i; j < end; j++) {
           const start = j * chunkSize;
@@ -227,7 +239,9 @@ export function MultipartComponent({ file, bucket }: MultipartProps) {
   }, []);
 
   const isComplete = progress === 100;
-  const canStart = Boolean(file && bucket && !isUploading);
+  const canStart = Boolean(
+    file && bucket && !isUploading && config && !configError,
+  );
 
   return (
     <div>
